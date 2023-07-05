@@ -1,4 +1,4 @@
-* Explored
+* Learned
 ** Why do I have to use ~String::from~ for string literals?
 
 It seems to work when you remove ~String::from~, but the tree node is then of type ~&str~, not ~String~. You can't mix the two, as the compiler generates an error. Like this:
@@ -30,6 +30,49 @@ fn print_tree<T>(t: &Tree<T>) { ... }
 #+END_SRC
 
 This makes sense. Because I call ~println!~ on values of type T within the function, we need to tell it “this function accepts trees of /printable/ items”, rather than “accepts arbitrary trees”. Traits start to smell like Haskell type classes.
+
+** Mixing peekable iterators with ~for … in~
+
+You can’t. Instead of:
+
+#+BEGIN_SRC rust
+  let mut it = coll.iter().peekable(); // needs to be mut
+
+  for elem in it {
+      do_something(elem);
+      do_something_else(it.peek()); // doesn’t compile
+  }
+  // …
+#+END_SRC
+
+I needed to convert the loop to a ~while~:
+
+#+BEGIN_SRC rust
+  while let Some(elem) = it.next() {
+      do_something(elem);
+      do_something_else(it.peek()); // kosher
+  }
+  // …
+#+END_SRC
+
+The error originating from the first snippet is:
+#+BEGIN_EXAMPLE
+error[E0382]: borrow of moved value: `it`
+  --> src/main.rs:15:15
+   |
+10 |     let mut it = t.children.iter().peekable();
+   |         ------ move occurs because `it` has type `Peekable<std::slice::Iter<'_, Tree<T>>>`, which does not implement the `Copy` trait
+...
+13 |     for child in it {
+   |                  -- `it` moved due to this implicit call to `.into_iter()`
+14 |     // while let Some(child) = it.next() {
+15 |         match it.peek() {
+   |               ^^^^^^^^^ value borrowed here after move
+   |
+note: `into_iter` takes ownership of the receiver `self`, which moves `it`
+#+END_EXAMPLE
+
+I need to meditate on it some more.
 
 * To explore
 ** Traits
