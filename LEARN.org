@@ -1,5 +1,4 @@
 * Explored
-* To explore
 ** Why do I have to use ~String::from~ for string literals?
 
 It seems to work when you remove ~String::from~, but the tree node is then of type ~&str~, not ~String~. You can't mix the two, as the compiler generates an error. Like this:
@@ -15,4 +14,25 @@ error[E0308]: mismatched types
   |                                     help: consider borrowing here: `&String::from("child")`
 #+END_EXAMPLE
 
-Looks like I need to read up on the difference between `&str` and `String`.
+So ~String::from~ actually returns a ~String~, while the type of string literals is ~&str~. The difference is that ~String~ is a potentially mutable string that has a length and a capacity (so similar to a ~StringBuffer~ or ~StringBuilder~ in Java), whereas ~&str~ is the type of /immutable string slices/.
+
+** Generic function syntax
+
+The declaration of ~print_tree~ has to be:
+
+#+BEGIN_SRC rust
+fn print_tree<T: std::fmt::Display>(t: &Tree<T>) { ... }
+#+END_SRC
+
+Rather than the one I tried first:
+#+BEGIN_SRC rust
+fn print_tree<T>(t: &Tree<T>) { ... }
+#+END_SRC
+
+This makes sense. Because I call ~println!~ on values of type T within the function, we need to tell it “this function accepts trees of /printable/ items”, rather than “accepts arbitrary trees”. Traits start to smell like Haskell type classes.
+
+* To explore
+** Traits
+** How to test functions that print stuff?
+
+I.e., what is the Rust equivalent of Clojure’s ~with-out-str~?
