@@ -76,6 +76,10 @@ I need to meditate on it some more.
 
 * To explore
 ** Traits
+** Lifetimes
+
+The signature of ~append_path~ turned out to require an explicit lifetime declaration. I’ve read the relevant section of the Book (10.3) but I don’t fully grok it yet.
+
 ** How to test functions that print stuff?
 
 I.e., what is the Rust equivalent of Clojure’s ~with-out-str~?

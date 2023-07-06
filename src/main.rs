@@ -23,21 +23,31 @@ fn print_tree<T: Display>(t: &Tree<T>) {
     print_tree_with_prefix("", "", "", t);
 }
 
+fn append_path<'a>(ut: &mut Tree<&'a str>, path: &'a str) {
+    let mut t = ut;
+    for node in path.split("/") {
+        let match_last = match t.children.last() {
+            None => false,
+            Some(x) => x.value == node
+        };
+
+        if match_last {
+            t = t.children.last_mut().expect("should not happen");
+        } else {
+            let subtree = Tree { value: node, children: vec![] };
+            t.children.push(subtree);
+            t = t.children.last_mut().expect("should not happen");
+        }
+    }
+}
+
 fn main() {
-    let t = Tree {
-        value: "raz",
-        children: vec![
-            Tree {value: "dwa", children: vec![
-                Tree {value: "trzy", children: vec![]},
-                Tree {value: "cztery", children: vec![]},
-            ]},
-            Tree {value: "pięć", children: vec![
-                Tree {value: "sześć", children: vec![
-                    Tree {value: "siedem", children: vec![]},
-                ]},
-            ]},
-            Tree {value: "osiem", children: vec![]}]
-    };
+    let mut t = Tree {value: "raz", children: vec![]};
+
+    append_path(&mut t, "dwa/trzy/trzysta");
+    append_path(&mut t, "dwa/cztery/cztery-i-pół");
+    append_path(&mut t, "pięć/sześć/siedem");
+    append_path(&mut t, "osiem");
 
     print_tree(&t);
 }
