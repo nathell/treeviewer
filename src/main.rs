@@ -7,9 +7,11 @@ pub struct Tree<T> {
 }
 
 fn print_tree_with_prefix<T: Display>(prefix: &str, prefix1: &str, prefix2: &str, t: &Tree<T>) {
-    println!("{0}{1}{2}", prefix, prefix1, t.value);
-    let mut it = t.children.iter().peekable();
+    if !prefix1.is_empty() {
+        println!("{0}{1}{2}", prefix, prefix1, t.value);
+    }
 
+    let mut it = t.children.iter().peekable();
     let subprefix = format!("{0}{1}", prefix, prefix2);
 
     while let Some(child) = it.next() {
@@ -26,6 +28,10 @@ fn print_tree<T: Display>(t: &Tree<T>) {
 
 fn append_path<'a>(mut t: &mut Tree<&'a str>, path: &'a str) {
     for node in path.split("/") {
+        if node.is_empty() {
+            continue;
+        }
+
         let match_last = match t.children.last() {
             None => false,
             Some(x) => x.value == node
