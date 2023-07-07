@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io::{self, BufRead};
 
 pub struct Tree<T> {
     value: T,
@@ -41,12 +42,17 @@ fn append_path<'a>(mut t: &mut Tree<&'a str>, path: &'a str) {
 }
 
 fn main() {
-    let mut t = Tree {value: "raz", children: vec![]};
+    let mut t = Tree {value: "", children: vec![]};
+    let mut input: Vec<String> = vec![];
+    let stdin = io::stdin();
 
-    append_path(&mut t, "dwa/trzy/trzysta");
-    append_path(&mut t, "dwa/cztery/cztery-i-pół");
-    append_path(&mut t, "pięć/sześć/siedem");
-    append_path(&mut t, "osiem");
+    for line in stdin.lock().lines() {
+        input.push(line.unwrap());
+    }
+
+    for line in input.iter() {
+        append_path(&mut t, line);
+    }
 
     print_tree(&t);
 }

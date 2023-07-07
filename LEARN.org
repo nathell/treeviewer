@@ -74,6 +74,23 @@ note: `into_iter` takes ownership of the receiver `self`, which moves `it`
 
 I need to meditate on it some more.
 
+** Extending lifetime
+
+This doesn’t work:
+
+#+BEGIN_SRC rust
+for line in stdin.lock().lines() {
+    append_path(&mut t, &line.unwrap());
+}
+#+END_SRC
+
+It’s intuitively obvious why. On each iteration, ~line~ lives only as long as the ~for~ loop’s inner block, so we need to extend the string’s lifetime somehow. (Removing the borrow from ~line.unwrap()~ results in a type mismatch.)
+
+It’s unclear to me whether there exists a general approach to this. The compiler suggests
+“consider using a ~let~ binding to create a longer lived value”, but in this particular case, it wouldn’t help either. So I ended up putting all the lines in a long-lived vector first (which makes
+additional sense in my case: the vector can be sorted before passing its elements to ~append_path~, in
+case the input is not sorted already).
+
 * To explore
 ** Traits
 ** Lifetimes
