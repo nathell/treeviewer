@@ -9,9 +9,9 @@ pub struct Tree<T> {
 }
 
 pub struct TreeIterator<'a, T> {
-    prefix: String,
-    prefix1: &'static str,
-    prefix2: &'static str,
+    parent_prefix: String,
+    immediate_prefix: &'static str,
+    parent_suffix: &'static str,
     value: &'a T,
     emitted: bool,
     viter: Box<dyn Iterator<Item = String> + 'a>,
@@ -22,32 +22,30 @@ impl<'a, T> Iterator for TreeIterator<'a, T> where T: Display {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.emitted && !self.prefix1.is_empty() {
+        if !self.emitted && !self.immediate_prefix.is_empty() {
             self.emitted = true;
-            Some(format!("{0}{1}{2}", self.prefix, self.prefix1, self.value))
+            Some(format!("{0}{1}{2}", self.parent_prefix, self.immediate_prefix, self.value))
         } else if let Some(val) = self.viter.next() {
             Some(val)
+        } else if let Some(child) = self.citer.next() {
+            let subprefix = format!("{0}{1}", self.parent_prefix, self.parent_suffix);
+            let last = !self.citer.peek().is_some();
+            let immediate_prefix = if last { "└─ " } else { "├─ " };
+            let parent_suffix = if last { "   " } else { "│  " };
+            self.viter = Box::new(child.prefixed_lines(subprefix, immediate_prefix, parent_suffix));
+            self.next()
         } else {
-            if let Some(child) = self.citer.next() {
-                let subprefix = format!("{0}{1}", self.prefix, self.prefix2);
-                let last = !self.citer.peek().is_some();
-                let prefix1 = if last { "└─ " } else { "├─ " };
-                let prefix2 = if last { "   " } else { "│  " };
-                self.viter = Box::new(child.prefixed_lines(subprefix, prefix1, prefix2));
-                self.next()
-            } else {
-                None
-            }
+            None
         }
     }
 }
 
 impl<T> Tree<T> where T: Display {
-    pub fn prefixed_lines<'a>(&'a self, prefix: String, prefix1: &'static str, prefix2: &'static str) -> TreeIterator<'a, T> {
+    pub fn prefixed_lines<'a>(&'a self, parent_prefix: String, immediate_prefix: &'static str, parent_suffix: &'static str) -> TreeIterator<'a, T> {
         TreeIterator {
-            prefix: prefix,
-            prefix1: prefix1,
-            prefix2: prefix2,
+            parent_prefix: parent_prefix,
+            immediate_prefix: immediate_prefix,
+            parent_suffix: parent_suffix,
             value: &self.value,
             emitted: false,
             viter: Box::new(empty()),
