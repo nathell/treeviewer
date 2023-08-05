@@ -3,6 +3,12 @@ use std::io::{self, BufRead};
 use std::iter::{empty, Peekable};
 use std::slice::Iter;
 
+use cursive::{
+    Cursive,
+    view::Scrollable,
+    views::SelectView
+};
+
 pub struct Tree<T> {
     value: T,
     children: Vec<Tree<T>>,
@@ -58,13 +64,7 @@ impl<T> Tree<T> where T: Display {
     }
 }
 
-fn print_tree<T: Display>(t: &Tree<T>) {
-    for line in t.lines() {
-        println!("{}", line);
-    }
-}
-
-fn append_path<'a>(mut t: &mut Tree<&'a str>, path: &'a str) {
+fn append_path<'a>(mut t: &'a mut Tree<String>, path: &'a str) {
     for node in path.split("/") {
         if node.is_empty() {
             continue;
@@ -78,7 +78,7 @@ fn append_path<'a>(mut t: &mut Tree<&'a str>, path: &'a str) {
         if match_last {
             t = t.children.last_mut().unwrap();
         } else {
-            let subtree = Tree { value: node, children: vec![] };
+            let subtree = Tree { value: String::from(node), children: vec![] };
             t.children.push(subtree);
             t = t.children.last_mut().unwrap();
         }
@@ -86,7 +86,7 @@ fn append_path<'a>(mut t: &mut Tree<&'a str>, path: &'a str) {
 }
 
 fn main() {
-    let mut t = Tree {value: "", children: vec![]};
+    let mut t = Tree {value: String::from(""), children: vec![]};
     let mut input: Vec<String> = vec![];
     let stdin = io::stdin();
 
@@ -98,7 +98,13 @@ fn main() {
         append_path(&mut t, line);
     }
 
-    print_tree(&t);
+    let mut siv = cursive::default();
+    let mut select = SelectView::new();
+    select.add_all_str(t.lines());
+
+    siv.add_fullscreen_layer(select.scrollable());
+    siv.add_global_callback('q', Cursive::quit);
+    siv.run();
 }
 
 #[cfg(test)]
