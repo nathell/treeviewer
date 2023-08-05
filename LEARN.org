@@ -91,11 +91,28 @@ It’s unclear to me whether there exists a general approach to this. The compil
 additional sense in my case: the vector can be sorted before passing its elements to ~append_path~, in
 case the input is not sorted already).
 
+** ~Box~ vs. ~Vec~
+
+In chapter 15, the Book discusses why it's necessary to box a type when we're defining a recursive type (spoiler: so that the compiler can know how much memory to allocate). So, then, the question is: why does the current definition of ~Tree~ work?
+
+Answer: ~Vec~ owns its elements and keeps them on the heap, so it's similar to ~Box~ in that regard. See [[https://stackoverflow.com/questions/43641728][this SO answer]]. In fact, I think ~Box~ can be thought of as a one-element vector.
+
 * To explore
 ** Traits
 ** Lifetimes
 
 The signature of ~append_path~ turned out to require an explicit lifetime declaration. I’ve read the relevant section of the Book (10.3) but I don’t fully grok it yet.
+
+Looks like structures that hold references need an explicit lifetime declaration. The Rust Book seems to imply that this would be treyf:
+
+#+BEGIN_SRC rust
+pub struct TreeStr {
+    value: &str,
+    children: Vec<TreeStr>,
+}
+#+END_SRC
+
+Why can I instantiate ~Tree<&str>~'s when ~Tree~ is defined as a generic?
 
 ** How to test functions that print stuff?
 
