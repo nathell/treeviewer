@@ -5,7 +5,7 @@ use std::slice::Iter;
 
 use cursive::{
     Cursive,
-    view::Scrollable,
+    view::{Resizable, Scrollable},
     views::SelectView
 };
 
@@ -102,7 +102,7 @@ fn main() {
     let mut select = SelectView::new();
     select.add_all_str(t.lines());
 
-    siv.add_fullscreen_layer(select.scrollable());
+    siv.add_fullscreen_layer(select.scrollable().full_screen());
     siv.add_global_callback('q', Cursive::quit);
     siv.run();
 }
