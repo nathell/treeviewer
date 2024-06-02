@@ -6,8 +6,9 @@ use std::slice::Iter;
 
 use cursive::{
     Cursive,
-    view::{Resizable, Scrollable},
-    views::SelectView
+    event::Key,
+    view::{Nameable, Resizable, Scrollable},
+    views::{OnEventView, SelectView}
 };
 
 pub struct Tree<T> {
@@ -121,13 +122,26 @@ impl State {
     }
 }
 
+fn redraw(siv: &mut Cursive) {
+    // TODO: collect() feels excessive, but I can't beat the borrow checker without it
+    let lines: Vec<String> = siv.with_user_data(|state: &mut State| state.lines().collect()).unwrap();
+    let mut select = siv.find_name::<SelectView>("select").unwrap();
+    select.clear();
+    select.add_all_str(lines);
+}
+
 fn main() {
     let state = init_state();
     let mut siv = cursive::default();
-    let mut select = SelectView::new();
-    select.add_all_str(state.lines());
+    let mut select = SelectView::new().with_name("select");
+    select.get_mut().add_all_str(state.lines());
+    siv.set_user_data(state);
 
-    siv.add_fullscreen_layer(select.scrollable().full_screen());
+    let xselect = OnEventView::new(select)
+        .on_event(Key::Right, move |s| { s.with_user_data(|state: &mut State| { state.collapsed.remove(&vec![0, 1, 1]); }); redraw(s); })
+        .on_event(Key::Left, move |s| { s.with_user_data(|state: &mut State| { state.collapsed.insert(vec![0, 1, 1]); }); redraw(s); });
+
+    siv.add_fullscreen_layer(xselect.scrollable().full_screen());
     siv.add_global_callback('q', Cursive::quit);
     siv.run();
 }
