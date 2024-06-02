@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::io::{self, BufRead};
 use std::iter::{empty, Peekable};
@@ -22,6 +23,45 @@ pub struct TreeIterator<'a, T> {
     emitted: bool,
     viter: Box<dyn Iterator<Item = String> + 'a>,
     citer: Box<Peekable<Iter<'a, Tree<T>>>>,
+}
+
+pub struct State {
+    tree: Tree<String>,
+    collapsed: HashSet<Vec<i32>>,
+}
+
+fn append_path<'a>(mut t: &'a mut Tree<String>, path: &'a str) {
+    for node in path.split("/") {
+        if node.is_empty() {
+            continue;
+        }
+
+        let match_last = match t.children.last() {
+            None => false,
+            Some(x) => x.value == node
+        };
+
+        if match_last {
+            t = t.children.last_mut().unwrap();
+        } else {
+            let subtree = Tree { value: String::from(node), children: vec![] };
+            t.children.push(subtree);
+            t = t.children.last_mut().unwrap();
+        }
+    }
+}
+
+fn init_state() -> State {
+    let mut t = Tree {value: String::from(""), children: vec![]};
+    let stdin = io::stdin();
+
+    for line in stdin.lock().lines() {
+        append_path(&mut t, &line.unwrap());
+    }
+
+    let hs = HashSet::from([vec![0, 1, 1]]);
+
+    State { tree: t, collapsed: hs /* HashSet::new() */ }
 }
 
 impl<'a, T> Iterator for TreeIterator<'a, T> where T: Display {
@@ -64,43 +104,11 @@ impl<T> Tree<T> where T: Display {
     }
 }
 
-fn append_path<'a>(mut t: &'a mut Tree<String>, path: &'a str) {
-    for node in path.split("/") {
-        if node.is_empty() {
-            continue;
-        }
-
-        let match_last = match t.children.last() {
-            None => false,
-            Some(x) => x.value == node
-        };
-
-        if match_last {
-            t = t.children.last_mut().unwrap();
-        } else {
-            let subtree = Tree { value: String::from(node), children: vec![] };
-            t.children.push(subtree);
-            t = t.children.last_mut().unwrap();
-        }
-    }
-}
-
 fn main() {
-    let mut t = Tree {value: String::from(""), children: vec![]};
-    let mut input: Vec<String> = vec![];
-    let stdin = io::stdin();
-
-    for line in stdin.lock().lines() {
-        input.push(line.unwrap());
-    }
-
-    for line in input.iter() {
-        append_path(&mut t, line);
-    }
-
+    let state = init_state();
     let mut siv = cursive::default();
     let mut select = SelectView::new();
-    select.add_all_str(t.lines());
+    select.add_all_str(state.tree.lines());
 
     siv.add_fullscreen_layer(select.scrollable().full_screen());
     siv.add_global_callback('q', Cursive::quit);
