@@ -23,6 +23,8 @@ pub struct TreeIterator<'a, T> {
     emitted: bool,
     viter: Box<dyn Iterator<Item = String> + 'a>,
     citer: Box<Peekable<Iter<'a, Tree<T>>>>,
+    collapsed: &'a HashSet<Vec<i32>>,
+    current: Vec<i32>,
 }
 
 pub struct State {
@@ -70,16 +72,27 @@ impl<'a, T> Iterator for TreeIterator<'a, T> where T: Display {
     fn next(&mut self) -> Option<Self::Item> {
         if !self.emitted && !self.immediate_prefix.is_empty() {
             self.emitted = true;
-            Some(format!("{0}{1}{2}", self.parent_prefix, self.immediate_prefix, self.value))
+            let val = format!("{}{}{}", self.parent_prefix, self.immediate_prefix, self.value);
+            self.current.push(0);
+            Some(val)
         } else if let Some(val) = self.viter.next() {
+            let val = format!("{}", val);
             Some(val)
         } else if let Some(child) = self.citer.next() {
+            let node_collapsed = self.collapsed.contains(&self.current);
             let subprefix = format!("{0}{1}", self.parent_prefix, self.parent_suffix);
             let last = !self.citer.peek().is_some();
             let immediate_prefix = if last { "└─ " } else { "├─ " };
             let parent_suffix = if last { "   " } else { "│  " };
-            self.viter = Box::new(child.prefixed_lines(subprefix, immediate_prefix, parent_suffix));
-            self.next()
+            let val = if !node_collapsed {
+                self.viter = Box::new(child.prefixed_lines(subprefix, immediate_prefix, parent_suffix, &self.collapsed, self.current.clone()));
+                self.next()
+            } else {
+                let immediate_prefix = if last { "└⊞ " } else { "├⊞ " };
+                Some(format!("{}{}{}", subprefix, immediate_prefix, child.value))
+            };
+            *self.current.last_mut().unwrap() += 1;
+            val
         } else {
             None
         }
@@ -87,7 +100,7 @@ impl<'a, T> Iterator for TreeIterator<'a, T> where T: Display {
 }
 
 impl<T> Tree<T> where T: Display {
-    pub fn prefixed_lines<'a>(&'a self, parent_prefix: String, immediate_prefix: &'static str, parent_suffix: &'static str) -> TreeIterator<'a, T> {
+    pub fn prefixed_lines<'a>(&'a self, parent_prefix: String, immediate_prefix: &'static str, parent_suffix: &'static str, collapsed: &'a HashSet<Vec<i32>>, current: Vec<i32>) -> TreeIterator<'a, T> {
         TreeIterator {
             parent_prefix: parent_prefix,
             immediate_prefix: immediate_prefix,
@@ -96,11 +109,15 @@ impl<T> Tree<T> where T: Display {
             emitted: false,
             viter: Box::new(empty()),
             citer: Box::new(self.children.iter().peekable()),
+            collapsed: collapsed,
+            current: current,
         }
     }
+}
 
-    pub fn lines<'a>(&'a self) -> TreeIterator<'a, T> {
-        self.prefixed_lines(String::from(""), "", "")
+impl State {
+    pub fn lines<'a>(&'a self) -> TreeIterator<'a, String> {
+        self.tree.prefixed_lines(String::from(""), "", "", &self.collapsed, vec![0])
     }
 }
 
@@ -108,7 +125,7 @@ fn main() {
     let state = init_state();
     let mut siv = cursive::default();
     let mut select = SelectView::new();
-    select.add_all_str(state.tree.lines());
+    select.add_all_str(state.lines());
 
     siv.add_fullscreen_layer(select.scrollable().full_screen());
     siv.add_global_callback('q', Cursive::quit);
