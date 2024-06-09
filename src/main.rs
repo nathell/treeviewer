@@ -36,8 +36,8 @@ pub struct State {
     collapsed: HashSet<Vec<i32>>,
 }
 
-fn append_path<'a>(mut t: &'a mut Tree<String>, path: &'a str) {
-    for node in path.split("/") {
+fn append_path<'a>(mut t: &'a mut Tree<String>, path: &'a str, separator: &'a str) {
+    for node in path.split(separator) {
         if node.is_empty() {
             continue;
         }
@@ -63,11 +63,11 @@ where P: AsRef<Path>, {
     Ok(io::BufReader::new(file).lines())
 }
 
-fn init_state(path: &Path) -> State {
+fn init_state(path: &Path, separator: &str) -> State {
     let mut t = Tree {value: String::from(""), children: vec![]};
 
     for line in read_lines(path).unwrap().flatten() {
-        append_path(&mut t, &line);
+        append_path(&mut t, &line, separator);
     }
 
     State { tree: t, collapsed: HashSet::new() }
@@ -190,6 +190,10 @@ fn redraw(siv: &mut Cursive) {
 /// Reads a list of slash-separated paths and displays them as a tree.
 #[derive(Parser)]
 struct Cli {
+    /// Separator of nodes in paths
+    #[arg(short, long, default_value_t = String::from("/"))]
+    separator: String,
+
     /// The file to display
     file: PathBuf,
 }
@@ -197,7 +201,7 @@ struct Cli {
 fn main() {
     let args = Cli::parse();
 
-    let state = init_state(&args.file);
+    let state = init_state(&args.file, &args.separator);
     let mut siv = cursive::default();
     let mut select = SelectView::new().with_name("select");
     select.get_mut().add_all_str(state.lines());
