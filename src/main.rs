@@ -1,8 +1,11 @@
 use std::collections::HashSet;
 use std::fmt::Display;
+use std::fs::File;
 use std::io::{self, BufRead};
+use std::path::{Path, PathBuf};
 use std::iter::{empty, Peekable};
 use std::slice::Iter;
+use clap::Parser;
 
 use cursive::{
     Cursive,
@@ -54,12 +57,17 @@ fn append_path<'a>(mut t: &'a mut Tree<String>, path: &'a str) {
     }
 }
 
-fn init_state() -> State {
-    let mut t = Tree {value: String::from(""), children: vec![]};
-    let stdin = io::stdin();
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
 
-    for line in stdin.lock().lines() {
-        append_path(&mut t, &line.unwrap());
+fn init_state(path: &Path) -> State {
+    let mut t = Tree {value: String::from(""), children: vec![]};
+
+    for line in read_lines(path).unwrap().flatten() {
+        append_path(&mut t, &line);
     }
 
     State { tree: t, collapsed: HashSet::new() }
@@ -178,10 +186,18 @@ fn redraw(siv: &mut Cursive) {
         }
     });
 }
+
+/// Reads a list of slash-separated paths and displays them as a tree.
+#[derive(Parser)]
+struct Cli {
+    /// The file to display
+    file: PathBuf,
 }
 
 fn main() {
-    let state = init_state();
+    let args = Cli::parse();
+
+    let state = init_state(&args.file);
     let mut siv = cursive::default();
     let mut select = SelectView::new().with_name("select");
     select.get_mut().add_all_str(state.lines());
